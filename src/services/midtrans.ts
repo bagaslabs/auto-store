@@ -62,6 +62,14 @@ export function parseMidtransNotification(
   };
 }
 
+export function parseMidtransGrossAmount(value: string): number {
+  const amount = Number(value);
+  if (!Number.isSafeInteger(amount) || amount < 0) {
+    throw new Error("gross_amount Midtrans tidak valid");
+  }
+  return amount;
+}
+
 export class MidtransService {
   private readonly baseUrl: string;
   private readonly authorization: string;

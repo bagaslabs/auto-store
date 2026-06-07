@@ -5,20 +5,13 @@ import type { StoreRepository } from "./repositories/store";
 import {
   type MidtransNotification,
   MidtransService,
+  parseMidtransGrossAmount,
   parseMidtransNotification,
 } from "./services/midtrans";
 import type { SettlementResult } from "./types";
 
 export interface PaymentNotifier {
   (result: SettlementResult): Promise<void>;
-}
-
-function grossAmountToInteger(notification: MidtransNotification): number {
-  const value = Number(notification.gross_amount);
-  if (!Number.isFinite(value) || value < 0 || !Number.isInteger(value)) {
-    throw new Error("gross_amount Midtrans tidak valid");
-  }
-  return value;
 }
 
 export function createServer(input: {
@@ -71,7 +64,9 @@ export function createServer(input: {
           orderId: notification.order_id,
           midtransTransactionId: notification.transaction_id,
           transactionStatus: notification.transaction_status,
-          grossAmountIdr: grossAmountToInteger(notification),
+          grossAmountIdr: parseMidtransGrossAmount(
+            notification.gross_amount,
+          ),
           payload: notification,
         });
 

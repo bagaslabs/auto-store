@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { sha512 } from "../lib/security";
 import {
   MidtransService,
+  parseMidtransGrossAmount,
   parseMidtransNotification,
 } from "./midtrans";
 
@@ -54,5 +55,13 @@ describe("MidtransService", () => {
 
   test("rejects incomplete payloads", () => {
     expect(() => parseMidtransNotification({ order_id: "x" })).toThrow();
+  });
+
+  test("parses Midtrans decimal-formatted IDR amount", () => {
+    expect(parseMidtransGrossAmount("223778.00")).toBe(223778);
+  });
+
+  test("rejects fractional Midtrans IDR amount", () => {
+    expect(() => parseMidtransGrossAmount("223778.50")).toThrow();
   });
 });

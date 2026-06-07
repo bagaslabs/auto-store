@@ -344,6 +344,19 @@ export class StoreRepository {
     return data as Transaction | null;
   }
 
+  async listPendingTopups(limit = 50): Promise<Transaction[]> {
+    const { data, error } = await this.database
+      .from("transactions")
+      .select("*")
+      .eq("type", "topup")
+      .eq("status", "pending")
+      .not("midtrans_order_id", "is", null)
+      .order("created_at", { ascending: true })
+      .limit(limit);
+    throwIfError(error);
+    return (data ?? []) as Transaction[];
+  }
+
   async settleTopup(input: {
     orderId: string;
     midtransTransactionId: string;

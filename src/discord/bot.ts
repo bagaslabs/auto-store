@@ -35,6 +35,7 @@ import type {
   MidtransNotification,
   MidtransService,
 } from "../services/midtrans";
+import { parseMidtransGrossAmount } from "../services/midtrans";
 import type { ProductUpdate, SettlementResult } from "../types";
 import { commands } from "./commands";
 import { buildStorePanel, BUTTON_IDS, MODAL_IDS } from "./views";
@@ -72,7 +73,9 @@ function isUnknownInteraction(error: unknown): boolean {
 export class StoreBot {
   readonly client = new Client({ intents: [GatewayIntentBits.Guilds] });
   private refreshTimer?: ReturnType<typeof setInterval>;
+  private paymentReconcileTimer?: ReturnType<typeof setInterval>;
   private refreshInProgress = false;
+  private paymentReconcileInProgress = false;
 
   constructor(
     private readonly config: AppConfig,
@@ -89,6 +92,13 @@ export class StoreBot {
         () => void this.updateLiveStock(),
         30_000,
       );
+      if (this.config.midtrans.enabled) {
+        void this.reconcilePendingTopups();
+        this.paymentReconcileTimer = setInterval(
+          () => void this.reconcilePendingTopups(),
+          60_000,
+        );
+      }
     });
     this.client.on(Events.Error, (error) => {
       console.error("Discord client error:", error);
@@ -102,7 +112,61 @@ export class StoreBot {
 
   async stop(): Promise<void> {
     if (this.refreshTimer) clearInterval(this.refreshTimer);
+    if (this.paymentReconcileTimer) {
+      clearInterval(this.paymentReconcileTimer);
+    }
     this.client.destroy();
+  }
+
+  private async reconcilePendingTopups(): Promise<void> {
+    if (
+      !this.config.midtrans.enabled ||
+      this.paymentReconcileInProgress
+    ) {
+      return;
+    }
+
+    this.paymentReconcileInProgress = true;
+    try {
+      const transactions = await this.store.listPendingTopups();
+      for (const transaction of transactions) {
+        const orderId = transaction.midtrans_order_id;
+        if (!orderId) continue;
+
+        try {
+          const status = await this.midtrans.getStatus(orderId);
+          if (!this.midtrans.isSuccessful(status)) continue;
+
+          const result = await this.store.settleTopup({
+            orderId,
+            midtransTransactionId: status.transaction_id,
+            transactionStatus: status.transaction_status,
+            grossAmountIdr: parseMidtransGrossAmount(status.gross_amount),
+            payload: status,
+          });
+          if (!result.already_credited) {
+            await this.notifyPayment(result).catch((error) => {
+              console.error(
+                `Gagal mengirim notifikasi pembayaran ${orderId}:`,
+                error,
+              );
+            });
+            console.info(
+              `[Midtrans] Pembayaran ${orderId} direkonsiliasi otomatis.`,
+            );
+          }
+        } catch (error) {
+          console.error(
+            `Gagal merekonsiliasi pembayaran ${orderId}:`,
+            error,
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Gagal membaca transaksi pending:", error);
+    } finally {
+      this.paymentReconcileInProgress = false;
+    }
   }
 
   async notifyPayment(result: SettlementResult): Promise<void> {
