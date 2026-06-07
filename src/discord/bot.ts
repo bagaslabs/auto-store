@@ -41,6 +41,7 @@ import { commands } from "./commands";
 import { buildStorePanel, BUTTON_IDS, MODAL_IDS } from "./views";
 
 const GROW_ID_PATTERN = /^[A-Za-z0-9]{3,18}$/;
+const EPHEMERAL_DELETE_DELAY_MS = 14 * 60 * 1_000;
 
 function modalRow(input: TextInputBuilder) {
   return new ActionRowBuilder<TextInputBuilder>().addComponents(input);
@@ -403,7 +404,35 @@ export class StoreBot {
           })
           .catch(() => null);
       }
+    } finally {
+      this.scheduleEphemeralDeletion(interaction);
     }
+  }
+
+  private scheduleEphemeralDeletion(interaction: Interaction): void {
+    if (
+      !interaction.isRepliable() ||
+      (!interaction.deferred && !interaction.replied) ||
+      !("ephemeral" in interaction) ||
+      interaction.ephemeral !== true
+    ) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void interaction.deleteReply().catch((error: unknown) => {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          (error.code === 10008 || error.code === 10015)
+        ) {
+          return;
+        }
+        console.error("Gagal menghapus pesan ephemeral:", error);
+      });
+    }, EPHEMERAL_DELETE_DELAY_MS);
+    timer.unref?.();
   }
 
   private async handleButton(interaction: ButtonInteraction): Promise<void> {
