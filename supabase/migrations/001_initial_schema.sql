@@ -104,7 +104,9 @@ from public.products p
 left join public.stock_items s on s.product_id = p.id
 group by p.id;
 
-create or replace function public.purchase_product(
+drop function if exists public.purchase_product(text, text, integer);
+
+create function public.purchase_product(
   p_discord_id text,
   p_product_code text,
   p_quantity integer
@@ -141,8 +143,8 @@ begin
 
   select *
   into v_user
-  from public.users
-  where discord_id = p_discord_id
+  from public.users as u
+  where u.discord_id = p_discord_id
   for update;
 
   if not found or v_user.grow_id is null then
@@ -151,9 +153,9 @@ begin
 
   select *
   into v_product
-  from public.products
-  where upper(code) = upper(trim(p_product_code))
-    and active = true
+  from public.products as p
+  where upper(p.code) = upper(trim(p_product_code))
+    and p.active = true
   for update;
 
   if not found then
@@ -171,11 +173,11 @@ begin
     array_agg(selected.content order by selected.created_at, selected.id)
   into v_stock_ids, v_stock_contents
   from (
-    select id, content, created_at
-    from public.stock_items
-    where product_id = v_product.id
-      and status = 'available'
-    order by created_at, id
+    select si.id, si.content, si.created_at
+    from public.stock_items as si
+    where si.product_id = v_product.id
+      and si.status = 'available'
+    order by si.created_at, si.id
     for update skip locked
     limit p_quantity
   ) selected;
@@ -184,7 +186,7 @@ begin
     raise exception 'Stok produk tidak mencukupi';
   end if;
 
-  insert into public.orders (
+  insert into public.orders as o (
     buyer_discord_id,
     product_id,
     quantity,
@@ -198,28 +200,28 @@ begin
     v_total,
     v_stock_contents
   )
-  returning id, created_at into v_order_id, v_order_created_at;
+  returning o.id, o.created_at into v_order_id, v_order_created_at;
 
-  update public.stock_items
+  update public.stock_items as si
   set
     status = 'sold',
     sold_to = p_discord_id,
     sold_at = now(),
     order_id = v_order_id
-  where id = any(v_stock_ids);
+  where si.id = any(v_stock_ids);
 
   update public.users as u
   set
     balance_locks = u.balance_locks - v_total,
     updated_at = now()
-  where discord_id = p_discord_id
+  where u.discord_id = p_discord_id
   returning u.balance_locks into v_balance;
 
-  update public.products
+  update public.products as p
   set
-    total_sold = total_sold + p_quantity,
+    total_sold = p.total_sold + p_quantity,
     updated_at = now()
-  where id = v_product.id;
+  where p.id = v_product.id;
 
   insert into public.transactions (
     user_id,
