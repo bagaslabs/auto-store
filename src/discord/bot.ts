@@ -180,6 +180,7 @@ export class StoreBot {
             .setTitle("Top-Up Berhasil")
             .setDescription(
               [
+                `Nominal top-up: **${formatIdr(result.amount_idr)}**`,
                 `Saldo masuk: **${formatLockUnits(result.credited_locks)}**`,
                 `Saldo sekarang: **${formatLockUnits(result.balance_locks)}**`,
                 `Transaction ID: \`${result.transaction_id}\``,
