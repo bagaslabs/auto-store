@@ -278,9 +278,9 @@ declare
 begin
   select *
   into v_transaction
-  from public.transactions
-  where midtrans_order_id = p_order_id
-    and type = 'topup'
+  from public.transactions as t
+  where t.midtrans_order_id = p_order_id
+    and t.type = 'topup'
   for update;
 
   if not found then
@@ -312,15 +312,15 @@ begin
     raise exception 'Status pembayaran belum berhasil';
   end if;
 
-  update public.transactions
+  update public.transactions as t
   set
     status = 'settlement',
     midtrans_transaction_id = p_midtrans_transaction_id,
     raw_payload = p_raw_payload,
     updated_at = now()
-  where id = v_transaction.id;
+  where t.id = v_transaction.id;
 
-  insert into public.users (
+  insert into public.users as u (
     discord_id,
     balance_locks,
     total_deposit_idr
@@ -330,12 +330,12 @@ begin
     v_transaction.amount_locks,
     v_transaction.amount_idr
   )
-  on conflict (discord_id) do update
+  on conflict on constraint users_pkey do update
   set
-    balance_locks = users.balance_locks + excluded.balance_locks,
-    total_deposit_idr = users.total_deposit_idr + excluded.total_deposit_idr,
+    balance_locks = u.balance_locks + excluded.balance_locks,
+    total_deposit_idr = u.total_deposit_idr + excluded.total_deposit_idr,
     updated_at = now()
-  returning users.balance_locks into v_balance;
+  returning u.balance_locks into v_balance;
 
   return query
   select
