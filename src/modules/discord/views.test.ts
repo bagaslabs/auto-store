@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { LiveProduct, StoreSettings } from "../types";
+import type { LiveProduct, StoreSettings } from "../store/model";
 import { buildStorePanel } from "./views";
 
 const settings: StoreSettings = {

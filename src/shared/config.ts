@@ -28,6 +28,10 @@ export interface AppConfig {
     minimumIdr: number;
     maximumIdr: number;
   };
+  growtopia: {
+    depositToken: string;
+    enabled: boolean;
+  };
 }
 
 function required(env: NodeJS.ProcessEnv, key: string): string {
@@ -126,6 +130,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     topup: {
       minimumIdr,
       maximumIdr,
+    },
+    growtopia: {
+      depositToken: env.GROWTOPIA_DEPOSIT_TOKEN?.trim() ?? "",
+      enabled: Boolean(env.GROWTOPIA_DEPOSIT_TOKEN?.trim()),
     },
   };
 }

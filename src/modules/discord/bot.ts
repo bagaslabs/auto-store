@@ -22,21 +22,22 @@ import {
   type TextChannel,
 } from "discord.js";
 
-import type { AppConfig } from "../config";
+import type { AppConfig } from "../../shared/config";
 import {
   calculateFee,
   formatIdr,
   formatLockUnits,
   locksFromIdr,
   parsePositiveInteger,
-} from "../lib/money";
-import type { StoreRepository } from "../repositories/store";
+} from "../../shared/lib/money";
+import type { StoreRepository } from "../store/repository";
 import type {
   MidtransNotification,
   MidtransService,
-} from "../services/midtrans";
-import { parseMidtransGrossAmount } from "../services/midtrans";
-import type { ProductUpdate, SettlementResult } from "../types";
+} from "../payments/midtrans";
+import { parseMidtransGrossAmount } from "../payments/midtrans";
+import type { BotStatus } from "../growtopia/model";
+import type { ProductUpdate, SettlementResult } from "../store/model";
 import { commands } from "./commands";
 import { buildStorePanel, BUTTON_IDS, MODAL_IDS } from "./views";
 
@@ -802,8 +803,27 @@ export class StoreBot {
   private async showDepositWorld(
     interaction: ButtonInteraction,
   ): Promise<void> {
-    const settings = await this.store.getStoreSettings();
+    const [settings, botStatus] = await Promise.all([
+      this.store.getStoreSettings(),
+      this.store
+        .getSetting<BotStatus>("growtopia_bot_status")
+        .catch(() => null),
+    ]);
     const deposit = settings.deposit_world;
+
+    const online = botStatus?.online ?? false;
+    const statusEmoji = online ? "🟢" : "🔴";
+    const statusText = online ? "Online" : "Offline";
+    const worldText = online && botStatus?.world
+      ? ` di **${botStatus.world.toUpperCase()}**`
+      : "";
+    const pingText = botStatus?.ping !== undefined
+      ? `Ping: **${botStatus.ping} ms**`
+      : "Ping: **-**";
+    const updateText = botStatus?.updated_at
+      ? `Terakhir update: <t:${Math.floor(new Date(botStatus.updated_at).getTime() / 1000)}:R>`
+      : "Terakhir update: **Tidak ada data**";
+
     await interaction.editReply({
       embeds: [
         new EmbedBuilder()
@@ -813,7 +833,12 @@ export class StoreBot {
             [
               `World: **${deposit.world}**`,
               `Owner: **${deposit.owner}**`,
-              `Bot in-game: **${deposit.bot_name}**`,
+              "",
+              `**Status Bot**`,
+              `Bot: **${deposit.bot_name}**`,
+              `${statusEmoji} ${statusText}${worldText}`,
+              pingText,
+              updateText,
               "",
               `Peringatan: ${deposit.note}`,
             ].join("\n"),

@@ -1,5 +1,5 @@
-import type { AppConfig } from "../config";
-import { safeEqual, sha512 } from "../lib/security";
+import type { AppConfig } from "../../shared/config";
+import { safeEqual, sha512 } from "../../shared/lib/security";
 
 export interface MidtransNotification {
   order_id: string;

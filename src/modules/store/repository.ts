@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { DatabaseClient } from "../database";
+import type { DatabaseClient } from "../../shared/database";
 import type {
   LiveProduct,
   Product,
@@ -12,7 +12,7 @@ import type {
   TopupInput,
   Transaction,
   UserAccount,
-} from "../types";
+} from "./model";
 
 function normalizeCode(code: string): string {
   return code.trim().toUpperCase();
@@ -167,6 +167,16 @@ export class StoreRepository {
       .from("users")
       .upsert({ discord_id: discordId }, { onConflict: "discord_id" });
     throwIfError(error);
+  }
+
+  async getUserByGrowId(growId: string): Promise<UserAccount | null> {
+    const { data, error } = await this.database
+      .from("users")
+      .select("discord_id,grow_id,balance_locks,total_deposit_idr")
+      .ilike("grow_id", growId.trim())
+      .maybeSingle();
+    throwIfError(error);
+    return data as UserAccount | null;
   }
 
   async getUser(discordId: string): Promise<UserAccount | null> {

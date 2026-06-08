@@ -1,16 +1,16 @@
-import { loadConfig } from "./config";
-import { createDatabaseClient } from "./database";
-import { StoreBot } from "./discord/bot";
-import { StoreRepository } from "./repositories/store";
-import { createServer } from "./server";
-import { MidtransService } from "./services/midtrans";
+import { createApp } from "./app";
+import { StoreBot } from "./modules/discord/bot";
+import { MidtransService } from "./modules/payments/midtrans";
+import { StoreRepository } from "./modules/store/repository";
+import { loadConfig } from "./shared/config";
+import { createDatabaseClient } from "./shared/database";
 
 const config = loadConfig();
 const database = createDatabaseClient(config);
 const store = new StoreRepository(database);
 const midtrans = new MidtransService(config.midtrans);
 const bot = new StoreBot(config, store, midtrans);
-const app = createServer({
+const app = createApp({
   config,
   store,
   midtrans,

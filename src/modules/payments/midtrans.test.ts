@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { sha512 } from "../lib/security";
+import { sha512 } from "../../shared/lib/security";
 import {
   MidtransService,
   parseMidtransGrossAmount,

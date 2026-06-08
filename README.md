@@ -24,8 +24,8 @@ Growtopia dinyatakan di luar cakupan v1.
    bun install
    ```
 
-2. Buat project Supabase, buka SQL Editor, lalu jalankan
-   `supabase/migrations/001_initial_schema.sql`.
+2. Buat project Supabase, buka SQL Editor, lalu jalankan semua file di
+   `supabase/migrations` sesuai urutan nama file.
 
 3. Buat aplikasi dan bot di Discord Developer Portal. Aktifkan scope `bot` dan
    `applications.commands`, lalu beri izin View Channels, Send Messages,
@@ -49,6 +49,19 @@ Growtopia dinyatakan di luar cakupan v1.
 
 Untuk produksi gunakan `bun run start` melalui process manager dan endpoint
 HTTPS publik.
+
+## Struktur Proyek
+
+Struktur `src` mengikuti pola feature-based module Elysia:
+
+- `src/main.ts`: bootstrap runtime Bun, bot Discord, dan HTTP server
+- `src/app.ts`: komposisi root Elysia app
+- `src/modules/health`: controller/service untuk `/` dan `/health`
+- `src/modules/midtrans`: controller/service/model untuk webhook Midtrans
+- `src/modules/discord`: bot Discord, slash command, dan embed/view builder
+- `src/modules/store`: repository dan model domain toko
+- `src/modules/payments`: integrasi gateway pembayaran
+- `src/shared`: config, database client, dan helper umum
 
 ## Midtrans
 

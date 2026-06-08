@@ -5,8 +5,8 @@ import {
   EmbedBuilder,
 } from "discord.js";
 
-import { formatIdr, formatLockUnits } from "../lib/money";
-import type { LiveProduct, StoreSettings } from "../types";
+import { formatIdr, formatLockUnits } from "../../shared/lib/money";
+import type { LiveProduct, StoreSettings } from "../store/model";
 
 const EMBED_DESCRIPTION_LIMIT = 4096;
 const PRODUCT_SEPARATOR = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
